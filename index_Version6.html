@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>bonus access verification</title>
+  <meta name="description" content="Enter your Gumroad license key to unlock bonus content." />
+  <style>
+    /* (same styles as before — trimmed for brevity) */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           min-height:100vh; display:flex; align-items:center; justify-content:center;
+           background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:32px; color:#111; }
+    .card{ width:720px; max-width:96%; background:#fff; padding:40px; border-radius:16px;
+           box-shadow:0 24px 60px rgba(0,0,0,0.18); }
+    .header{text-align:center;margin-bottom:20px}
+    .input{width:100%;padding:14px;border-radius:10px;border:2px solid #e6e7ee;font-family:ui-monospace}
+    .cta{width:100%;padding:12px;border-radius:10px;background:linear-gradient(90deg,#667eea,#7b4bb3);color:#fff;border:none;margin-top:14px}
+    .success{display:none;background:#f0f9ff;border:1px solid #bae6fd;padding:12px;border-radius:8px;margin-top:14px}
+    .error{display:none;background:#fff1f2;color:#991b1b;padding:10px;border-radius:8px;margin-top:10px}
+    .link-item { background:#fff;padding:12px;border-radius:8px;margin-bottom:10px;border-left:4px solid #667eea }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-labelledby="title">
+    <div class="header">
+      <h1 id="title">bonus access verification</h1>
+      <p>Bonus Content Access</p>
+    </div>
+
+    <div>
+      <label for="licenseKey"><strong>Enter Your License Key</strong></label>
+      <p style="color:#6b7280">Find your license key in your Gumroad purchase receipt email.</p>
+      <input id="licenseKey" class="input" placeholder="6F0E4C97-B72A4E69-A11BF6C4-AF6517E7" maxlength="35" inputmode="latin" autocomplete="off" />
+      <button id="verifyBtn" class="cta">Verify & Access Content</button>
+      <div id="errorMsg" class="error" role="alert"></div>
+
+      <div id="successBox" class="success" aria-hidden="true">
+        <div class="link-item">
+          <h4>Notion Workspace (67 AI Study Prompts)</h4>
+          <a id="notionLink" href="https://www.notion.so/The-Unfair-Study-Advantage-67-AI-Prompts-42e8ddd3cdb0838ea6e601ead747be25?source=copy_link" target="_blank" rel="noopener">Open Notion workspace</a>
+        </div>
+        <div class="link-item">
+          <h4>Daily Planner Template</h4>
+          <a id="plannerLink" href="https://www.notion.so/Daily-Planner-2d28ddd3cdb080beb900e03b6a1dfffa?source=copy_link" target="_blank" rel="noopener">Open Daily Planner</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Set VERIFY_ENDPOINT to your Netlify function path if you enable it.
+  // Netlify Functions are available at: /.netlify/functions/<function-name>
+  // If you deploy with the provided function name, use: '/.netlify/functions/verify-license'
+  const VERIFY_ENDPOINT = '/.netlify/functions/verify-license'; // set to '' to use client-only format check
+
+  const PUBLIC_LINKS = {
+    notion: 'https://www.notion.so/The-Unfair-Study-Advantage-67-AI-Prompts-42e8ddd3cdb0838ea6e601ead747be25?source=copy_link',
+    planner: 'https://www.notion.so/Daily-Planner-2d28ddd3cdb080beb900e03b6a1dfffa?source=copy_link'
+  };
+
+  const licensePattern = /^[A-Z0-9]{8}-[A-Z0-9]{8}-[A-Z0-9]{8}-[A-Z0-9]{8}$/;
+  const input = document.getElementById('licenseKey');
+  const verifyBtn = document.getElementById('verifyBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const successBox = document.getElementById('successBox');
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+  }
+  function hideError() {
+    errorMsg.style.display = 'none';
+  }
+  function showSuccess() {
+    document.getElementById('notionLink').href = PUBLIC_LINKS.notion;
+    document.getElementById('plannerLink').href = PUBLIC_LINKS.planner;
+    successBox.style.display = 'block';
+    successBox.setAttribute('aria-hidden','false');
+    successBox.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  async function verifyLicense() {
+    hideError();
+    successBox.style.display = 'none';
+    const raw = (input.value || '').trim().toUpperCase();
+    if (!raw) { showError('⚠️ Please enter your license key'); return; }
+    if (!licensePattern.test(raw)) { showError('⚠️ Invalid license key format. Copy it exactly from your receipt email.'); return; }
+
+    if (!VERIFY_ENDPOINT) {
+      // Client-only fallback (not secure)
+      showSuccess();
+      return;
+    }
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying...';
+    try {
+      const res = await fetch(VERIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseKey: raw })
+      });
+      const data = await res.json();
+      if (res.ok && data && data.valid) {
+        showSuccess();
+      } else {
+        showError(data && data.message ? data.message : '⚠️ License not valid.');
+      }
+    } catch (err) {
+      showError('⚠️ Verification failed. Try again later.');
+      console.error(err);
+    } finally {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = 'Verify & Access Content';
+    }
+  }
+
+  verifyBtn.addEventListener('click', verifyLicense);
+  input.addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyLicense(); });
+  input.focus();
+</script>
+</body>
+</html>

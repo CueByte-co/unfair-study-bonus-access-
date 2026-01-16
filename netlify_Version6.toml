@@ -1,0 +1,6 @@
+[build]
+  publish = "."        # static site is repo root (index.html)
+  command = ""         # no build step for plain HTML
+
+[functions]
+  directory = "netlify/functions"

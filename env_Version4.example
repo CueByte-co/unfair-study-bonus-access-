@@ -1,0 +1,4 @@
+# Example environment variables for the server
+GUMROAD_PRODUCT_PERMA=your-product-permalink   # required for server verification
+GUMROAD_ACCESS_TOKEN=your-access-token         # optional (follow Gumroad docs if required)
+PORT=3000
